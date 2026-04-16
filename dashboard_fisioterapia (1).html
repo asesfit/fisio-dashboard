@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Rentabilidad — Alba Bar · Alex Readaptación</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f7f6f3;--surface:#fff;--surface2:#f0ede8;--border:#e2ddd8;--border2:#ccc8c2;--text:#1a1916;--text2:#6b6760;--text3:#9e9b96;--accent:#2d5a3d;--accent2:#4a8c5c;--accent-light:#eaf2ec;--accent-border:#c5ddc8;--red:#b94040;--red-light:#fdf0f0;--amber:#a06820;--amber-light:#fdf6ec;--blue:#2a5580;--blue-light:#edf3f9;--radius:10px;--radius-sm:6px;--shadow:0 1px 3px rgba(0,0,0,0.07)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;min-height:100vh}
+.layout{display:grid;grid-template-columns:230px 1fr;min-height:100vh}
+.sidebar{background:var(--text);color:#fff;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
+.sidebar-logo{padding:24px 20px 18px;border-bottom:1px solid rgba(255,255,255,0.1)}
+.sidebar-logo .name{font-size:15px;font-weight:600;letter-spacing:-0.01em;line-height:1.3}
+.sidebar-logo .sub{font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px;font-family:'DM Mono',monospace}
+.sidebar-nav{padding:14px 0;flex:1}
+.nav-section{padding:0 12px;margin-bottom:2px}
+.nav-label{font-size:10px;font-family:'DM Mono',monospace;letter-spacing:0.08em;color:rgba(255,255,255,0.28);padding:8px 8px 4px;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 8px;border-radius:var(--radius-sm);cursor:pointer;color:rgba(255,255,255,0.55);font-size:13px;transition:all 0.15s;user-select:none}
+.nav-item:hover{background:rgba(255,255,255,0.07);color:#fff}
+.nav-item.active{background:rgba(255,255,255,0.13);color:#fff;font-weight:500}
+.nav-item svg{width:15px;height:15px;flex-shrink:0}
+.sync-status{padding:14px 20px;border-top:1px solid rgba(255,255,255,0.1);font-size:11px;font-family:'DM Mono',monospace}
+.sync-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#9e9b96;margin-right:6px;vertical-align:middle;transition:background 0.3s}
+.sync-dot.ok{background:#4a8c5c}
+.sync-dot.syncing{background:#a06820;animation:pulse 1s infinite}
+.sync-dot.error{background:#b94040}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.main{padding:32px 36px;overflow-y:auto}
+.page{display:none}.page.active{display:block}
+.page-header{margin-bottom:26px}
+.page-title{font-size:22px;font-weight:600;letter-spacing:-0.02em}
+.page-desc{font-size:13px;color:var(--text2);margin-top:4px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;box-shadow:var(--shadow)}
+.card-title{font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:var(--text3);margin-bottom:16px;font-family:'DM Mono',monospace}
+.metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.metric{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:15px 18px}
+.metric-label{font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;letter-spacing:0.04em;margin-bottom:5px}
+.metric-value{font-size:22px;font-weight:600;letter-spacing:-0.03em;line-height:1}
+.metric-sub{font-size:11px;color:var(--text3);margin-top:3px}
+.metric.accent{background:var(--accent-light);border-color:var(--accent-border)}.metric.accent .metric-value{color:var(--accent)}
+.metric.warn{background:var(--red-light);border-color:#f0c8c8}.metric.warn .metric-value{color:var(--red)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.mb16{margin-bottom:16px}.mb24{margin-bottom:24px}
+.form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:12px}
+.form-group label{display:block;font-size:11px;font-weight:500;color:var(--text2);margin-bottom:5px;font-family:'DM Mono',monospace;letter-spacing:0.03em}
+.form-group input,.form-group select{width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);background:var(--surface);outline:none;transition:border-color 0.15s}
+.form-group input:focus,.form-group select:focus{border-color:var(--accent2)}
+.form-group input[readonly]{background:var(--surface2);color:var(--text2)}
+.form-hint{font-size:12px;color:var(--text3);margin-top:4px;font-style:italic}
+.form-section{background:var(--surface2);border-radius:var(--radius);padding:16px 18px;margin-bottom:14px}
+.form-section-title{font-size:11px;font-weight:500;font-family:'DM Mono',monospace;letter-spacing:0.05em;color:var(--text3);text-transform:uppercase;margin-bottom:4px}
+.form-section-desc{font-size:12px;color:var(--text3);margin-bottom:12px;font-style:italic}
+.btn{padding:8px 18px;border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text);transition:all 0.15s}
+.btn:hover{background:var(--surface2);border-color:var(--border2)}.btn:disabled{opacity:0.5;cursor:not-allowed}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}.btn.primary:hover{background:var(--accent2)}
+.btn.danger{background:var(--red-light);color:var(--red);border-color:#f0c8c8}
+.btn.sm{padding:5px 12px;font-size:12px}
+.btn-row{display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500;font-family:'DM Mono',monospace}
+.badge.green{background:var(--accent-light);color:var(--accent)}.badge.red{background:var(--red-light);color:var(--red)}.badge.amber{background:var(--amber-light);color:var(--amber)}
+.divider{border:none;border-top:1px solid var(--border);margin:18px 0}
+.alert{padding:10px 14px;border-radius:var(--radius-sm);font-size:12.5px;margin-bottom:14px;display:flex;gap:10px;align-items:flex-start}
+.alert.info{background:var(--blue-light);color:var(--blue);border:1px solid #c5d8ee}
+.alert.warn{background:var(--amber-light);color:var(--amber);border:1px solid #e8c87a}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{font-size:11px;font-family:'DM Mono',monospace;letter-spacing:0.04em;color:var(--text3);font-weight:500;text-transform:uppercase;padding:8px 12px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+tbody td{padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:var(--surface2)}
+.chart-wrap{position:relative;width:100%}
+.fisio-tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.fisio-tab{padding:6px 16px;border-radius:20px;border:1px solid var(--border);font-size:13px;cursor:pointer;background:var(--surface);color:var(--text2);transition:all 0.15s}
+.fisio-tab:hover{border-color:var(--border2);color:var(--text)}
+.fisio-tab.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:500}
+.empty{text-align:center;padding:40px 20px;color:var(--text3);font-size:13px}
+.empty-icon{font-size:28px;margin-bottom:8px;opacity:0.4}
+.fisio-result{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:16px}
+.fisio-result-header{padding:14px 20px;background:var(--surface2);display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.fisio-result-name{font-weight:600;font-size:15px}
+.fisio-result-body{padding:20px}
+.periodo-bar{display:flex;gap:12px;align-items:flex-end;margin-bottom:20px;flex-wrap:wrap}
+.tag{display:inline-block;font-size:10px;font-family:'DM Mono',monospace;padding:2px 7px;border-radius:4px;margin-left:6px;vertical-align:middle}
+.tag.blue{background:var(--blue-light);color:var(--blue)}
+.tag.green{background:var(--accent-light);color:var(--accent)}
+#toast{position:fixed;bottom:24px;right:24px;background:var(--text);color:#fff;padding:10px 18px;border-radius:var(--radius);font-size:13px;font-weight:500;opacity:0;transform:translateY(8px);transition:all 0.25s;pointer-events:none;z-index:1000}
+#toast.show{opacity:1;transform:translateY(0)}
+@media(max-width:768px){.layout{grid-template-columns:1fr}.sidebar{height:auto;position:relative}.metrics-grid{grid-template-columns:1fr 1fr}.grid2{grid-template-columns:1fr}.main{padding:20px 16px}}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="name">Alba Bar · Alex<br>Readaptación</div>
+      <div class="sub">Cuadro de mando · v3.0</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <div class="nav-label">Gestión</div>
+        <div class="nav-item active" onclick="goTo('entrada',this)">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M5 8h6M8 5v6"/></svg>Entrada de datos
+        </div>
+        <div class="nav-item" onclick="goTo('resumen',this)">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M5 6h6M5 8.5h4M5 11h3"/></svg>Resumen mensual
+        </div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-label">Análisis</div>
+        <div class="nav-item" onclick="goTo('dashboard',this)">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M2 12L5 7L8 9L11 5L14 8"/></svg>Dashboard evolución
+        </div>
+        <div class="nav-item" onclick="goTo('comparativa',this)">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12V7M7 12V4M11 12V9" stroke-linecap="round"/></svg>Comparativa fisios
+        </div>
+      </div>
+    </nav>
+    <div class="sync-status">
+      <span class="sync-dot" id="sync-dot"></span>
+      <span id="sync-label" style="color:rgba(255,255,255,0.35)">Conectando...</span>
+    </div>
+  </aside>
+
+  <main class="main">
+    <!-- ENTRADA -->
+    <div id="page-entrada" class="page active">
+      <div class="page-header">
+        <div class="page-title">Entrada de datos</div>
+        <div class="page-desc">Raquel completa este formulario al cierre de cada mes. Los datos se guardan en Supabase y son visibles para todos al instante.</div>
+      </div>
+      <div class="card mb24">
+        <div class="card-title">Nuevo registro</div>
+        <div class="form-section">
+          <div class="form-section-title">Período y profesional</div>
+          <div class="form-row">
+            <div class="form-group"><label>Mes</label>
+              <select id="inp-mes"><option>Enero</option><option>Febrero</option><option>Marzo</option><option>Abril</option><option>Mayo</option><option>Junio</option><option>Julio</option><option>Agosto</option><option>Septiembre</option><option>Octubre</option><option>Noviembre</option><option>Diciembre</option></select>
+            </div>
+            <div class="form-group"><label>Año</label>
+              <select id="inp-anio"><option>2026</option><option>2027</option><option>2028</option><option>2029</option><option>2030</option></select>
+            </div>
+            <div class="form-group"><label>Fisioterapeuta</label>
+              <select id="inp-fisio"><option>Alba</option><option>Cris</option><option>Noelia</option></select>
+            </div>
+          </div>
+        </div>
+        <div class="form-section">
+          <div class="form-section-title">Actividad del mes</div>
+          <div class="form-row">
+            <div class="form-group"><label>Ingresos generados (€)</label><input type="number" id="inp-ingresos" placeholder="0.00" min="0" step="0.01"></div>
+            <div class="form-group"><label>Nº de citas atendidas</label><input type="number" id="inp-citas" placeholder="0" min="0"></div>
+          </div>
+        </div>
+        <div class="form-section" style="border-left:3px solid var(--blue);padding-left:15px">
+          <div class="form-section-title">Horas contratadas <span class="tag blue">para coste laboral/hora</span></div>
+          <div class="form-section-desc">Base para calcular el coste por hora según contrato. No varía por festivos ni vacaciones.</div>
+          <div class="form-row">
+            <div class="form-group"><label>Horas contratadas / semana</label><input type="number" id="inp-horas-semana" placeholder="ej. 20" min="0" step="0.5" oninput="calcHorasContrato()"></div>
+            <div class="form-group"><label>Semanas del mes</label>
+              <select id="inp-semanas" onchange="calcHorasContrato()">
+                <option value="4">4 semanas</option><option value="4.33" selected>4,33 semanas (media)</option><option value="5">5 semanas</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Total horas contrato al mes</label><input type="number" id="inp-horas-contrato" readonly><div class="form-hint" id="hint-contrato"></div></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Coste laboral + SS empresa (€)</label><input type="number" id="inp-coste" placeholder="0.00" min="0" step="0.01"><div class="form-hint">Nómina bruta + cuota Seguridad Social empresa</div></div>
+          </div>
+        </div>
+        <div class="form-section" style="border-left:3px solid var(--accent);padding-left:15px">
+          <div class="form-section-title">Horas ofertadas en agenda <span class="tag green">para ocupación y costes indirectos</span></div>
+          <div class="form-section-desc">Horas reales disponibles en Clinni/TIMP este mes, descontando festivos, bajas y vacaciones. En el caso de Alba, solo las horas de atención.</div>
+          <div class="form-row">
+            <div class="form-group"><label>Horas ofertadas en agenda este mes</label><input type="number" id="inp-horas-ofertadas" placeholder="Extraer de Clinni / TIMP" min="0" step="0.5"><div class="form-hint">Dato directo del programa de gestión</div></div>
+          </div>
+        </div>
+        <div class="form-section">
+          <div class="form-section-title">Costes indirectos del mes — Fisioterapia (€)</div>
+          <div class="alert info">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="flex-shrink:0;margin-top:1px"><circle cx="8" cy="8" r="6"/><path d="M8 7v4M8 5.5v.5"/></svg>
+            Introdúcelos una sola vez al mes. Se repartirán entre todas proporcionalmente a sus <strong>horas ofertadas en agenda</strong>.
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Alquiler / suministros (€)</label><input type="number" id="inp-ci-alquiler" placeholder="0.00" min="0" step="0.01"></div>
+            <div class="form-group"><label>Material clínico (€)</label><input type="number" id="inp-ci-material" placeholder="0.00" min="0" step="0.01"></div>
+            <div class="form-group"><label>Otros costes indirectos (€)</label><input type="number" id="inp-ci-otros" placeholder="0.00" min="0" step="0.01"></div>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn primary" id="btn-guardar" onclick="guardarRegistro()">Guardar</button>
+          <button class="btn" onclick="limpiarForm()">Limpiar</button>
+          <span id="msg-ok" style="font-size:13px;color:var(--accent);display:none">✓ Guardado correctamente</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Registros guardados</div>
+        <div class="table-wrap"><div id="tabla-registros"><div class="empty"><div class="empty-icon">⏳</div>Cargando datos...</div></div></div>
+      </div>
+    </div>
+
+    <!-- RESUMEN -->
+    <div id="page-resumen" class="page">
+      <div class="page-header"><div class="page-title">Resumen mensual</div><div class="page-desc">Todos los indicadores calculados para un mes concreto.</div></div>
+      <div class="card mb24">
+        <div class="periodo-bar">
+          <div class="form-group" style="width:160px"><label>Mes</label>
+            <select id="res-mes"><option>Enero</option><option>Febrero</option><option>Marzo</option><option>Abril</option><option>Mayo</option><option>Junio</option><option>Julio</option><option>Agosto</option><option>Septiembre</option><option>Octubre</option><option>Noviembre</option><option>Diciembre</option></select>
+          </div>
+          <div class="form-group" style="width:120px"><label>Año</label>
+            <select id="res-anio"><option>2026</option><option>2027</option><option>2028</option><option>2029</option></select>
+          </div>
+          <button class="btn primary" onclick="calcularResumen()">Ver resumen</button>
+        </div>
+      </div>
+      <div id="resumen-contenido"></div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="page-dashboard" class="page">
+      <div class="page-header"><div class="page-title">Dashboard evolución</div><div class="page-desc">Evolución mes a mes por fisioterapeuta.</div></div>
+      <div class="fisio-tabs" id="fisio-tabs-dash"></div>
+      <div id="dash-empty" class="empty" style="display:none"><div class="empty-icon">📊</div>Introduce al menos dos meses para ver la evolución.</div>
+      <div id="dash-charts">
+        <div class="metrics-grid" id="dash-metrics"></div>
+        <div class="grid2 mb16">
+          <div class="card"><div class="card-title">Ingresos mensuales (€)</div><div class="chart-wrap" style="height:200px"><canvas id="ch-ingresos"></canvas></div></div>
+          <div class="card"><div class="card-title">Citas atendidas</div><div class="chart-wrap" style="height:200px"><canvas id="ch-citas"></canvas></div></div>
+        </div>
+        <div class="grid2 mb16">
+          <div class="card"><div class="card-title">Ticket medio por sesión (€)</div><div class="chart-wrap" style="height:200px"><canvas id="ch-ticket"></canvas></div></div>
+          <div class="card"><div class="card-title">% Ocupación de agenda</div><div class="chart-wrap" style="height:200px"><canvas id="ch-ocup"></canvas></div></div>
+        </div>
+        <div class="grid2 mb16">
+          <div class="card"><div class="card-title">Coste total por hora (€)</div><div class="chart-wrap" style="height:200px"><canvas id="ch-coste-h"></canvas></div></div>
+          <div class="card"><div class="card-title">Beneficio por hora ofertada (€)</div><div class="chart-wrap" style="height:200px"><canvas id="ch-benef"></canvas></div></div>
+        </div>
+        <div class="card mb16"><div class="card-title">% Rentabilidad mensual</div><div class="chart-wrap" style="height:220px"><canvas id="ch-rent"></canvas></div></div>
+      </div>
+    </div>
+
+    <!-- COMPARATIVA -->
+    <div id="page-comparativa" class="page">
+      <div class="page-header"><div class="page-title">Comparativa entre fisioterapeutas</div><div class="page-desc">Visión conjunta en un mismo período.</div></div>
+      <div class="card mb24">
+        <div class="periodo-bar">
+          <div class="form-group" style="width:160px"><label>Mes</label>
+            <select id="cmp-mes"><option>Enero</option><option>Febrero</option><option>Marzo</option><option>Abril</option><option>Mayo</option><option>Junio</option><option>Julio</option><option>Agosto</option><option>Septiembre</option><option>Octubre</option><option>Noviembre</option><option>Diciembre</option></select>
+          </div>
+          <div class="form-group" style="width:120px"><label>Año</label>
+            <select id="cmp-anio"><option>2026</option><option>2027</option><option>2028</option><option>2029</option></select>
+          </div>
+          <button class="btn primary" onclick="calcularComparativa()">Comparar</button>
+        </div>
+      </div>
+      <div id="comparativa-contenido"></div>
+    </div>
+  </main>
+</div>
+
+<script>
+// ── SUPABASE CONFIG ───────────────────────────────────────────────
+const SUPABASE_URL = 'https://nvnphbfgjrbulbleawyc.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52bnBoYmZnanJidWxibGVhd3ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyOTM2ODMsImV4cCI6MjA5MTg2OTY4M30.oizo7Y-N6HHwQtwL_2uoan6GeXjmmcZtPa1hTVnb4oc';
+const TABLE = 'registros_fisio';
+
+async function sbFetch(path, opts = {}) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': opts.prefer || 'return=representation',
+      ...opts.headers
+    },
+    ...opts
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(err);
+  }
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+
+async function dbLoad() {
+  return sbFetch(`${TABLE}?order=anio.desc,mes_num.desc`);
+}
+
+async function dbUpsert(reg) {
+  return sbFetch(TABLE, {
+    method: 'POST',
+    prefer: 'resolution=merge-duplicates,return=representation',
+    headers: { 'Prefer': 'resolution=merge-duplicates,return=representation' },
+    body: JSON.stringify(reg)
+  });
+}
+
+async function dbDelete(id) {
+  return sbFetch(`${TABLE}?id=eq.${id}`, {
+    method: 'DELETE',
+    prefer: 'return=minimal'
+  });
+}
+
+// ── APP ───────────────────────────────────────────────────────────
+const FISIOS = ['Alba','Cris','Noelia'];
+const MESES  = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const COLORS = ['#2d5a3d','#2a5580','#a06820'];
+const FADES  = ['#2d5a3d33','#2a558033','#a0682033'];
+
+let datos = [];
+let charts = {};
+let selFisio = FISIOS[0];
+
+function g(id) { return document.getElementById(id); }
+function n(id) { return parseFloat(g(id).value) || 0; }
+function s(id) { return g(id).value; }
+
+function toast(msg, dur = 2500) {
+  const t = g('toast'); t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+
+function setSyncStatus(state, label) {
+  g('sync-dot').className = 'sync-dot ' + state;
+  g('sync-label').textContent = label;
+  g('sync-label').style.color = state === 'error' ? '#f0c8c8' : 'rgba(255,255,255,0.55)';
+}
+
+async function cargarDatos() {
+  setSyncStatus('syncing', 'Cargando...');
+  try {
+    datos = await dbLoad() || [];
+    setSyncStatus('ok', `${datos.length} registros`);
+  } catch(e) {
+    setSyncStatus('error', 'Error de conexión');
+    toast('No se pudo conectar con la base de datos. Comprueba la conexión.', 4000);
+    datos = [];
+  }
+  renderTabla();
+}
+
+function goTo(page, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+  g('page-' + page).classList.add('active');
+  el.classList.add('active');
+  if (page === 'dashboard') renderDashboard();
+  if (page === 'comparativa') calcularComparativa();
+}
+
+function calcHorasContrato() {
+  const hs = n('inp-horas-semana');
+  const sem = parseFloat(s('inp-semanas'));
+  if (hs > 0) {
+    const total = +(hs * sem).toFixed(1);
+    g('inp-horas-contrato').value = total;
+    g('hint-contrato').textContent = `${hs}h × ${sem} sem = ${total}h/mes de contrato`;
+  } else {
+    g('inp-horas-contrato').value = '';
+    g('hint-contrato').textContent = '';
+  }
+}
+
+function getPeriodo(mes, anio) {
+  return datos.filter(d => d.mes === mes && d.anio === anio);
+}
+
+function calcIndirecto(reg, pd) {
+  const totalH = pd.reduce((s, r) => s + (r.horas_ofertadas || 0), 0);
+  if (!totalH || !reg.horas_ofertadas) return 0;
+  const totalCI = pd.reduce((s, r) => s + (r.ci_alq || 0) + (r.ci_mat || 0) + (r.ci_otros || 0), 0);
+  return totalCI * (reg.horas_ofertadas / totalH);
+}
+
+function calcMetrics(reg, pd) {
+  const ticketMedio    = reg.citas > 0 ? reg.ingresos / reg.citas : 0;
+  const pctOcup        = reg.horas_ofertadas > 0 ? (reg.citas / reg.horas_ofertadas) * 100 : 0;
+  const horasRef       = reg.horas_contrato || reg.horas_ofertadas || 1;
+  const costeDirHora   = horasRef > 0 ? reg.coste_lab / horasRef : 0;
+  const ci             = calcIndirecto(reg, pd);
+  const costeIndHora   = reg.horas_ofertadas > 0 ? ci / reg.horas_ofertadas : 0;
+  const costeTotalHora = costeDirHora + costeIndHora;
+  const ingHora        = reg.horas_ofertadas > 0 ? reg.ingresos / reg.horas_ofertadas : 0;
+  const benefHora      = ingHora - costeTotalHora;
+  const rentPct        = ingHora > 0 ? (benefHora / ingHora) * 100 : 0;
+  return { ticketMedio, pctOcup, costeDirHora, costeIndHora, costeTotalHora, ingHora, benefHora, rentPct };
+}
+
+function rentBadge(r) {
+  if (r >= 40) return '<span class="badge green">Alta</span>';
+  if (r >= 20) return '<span class="badge amber">Media</span>';
+  return '<span class="badge red">Baja</span>';
+}
+
+async function guardarRegistro() {
+  const mes = s('inp-mes'), anio = s('inp-anio'), fisio = s('inp-fisio');
+  const ingresos = n('inp-ingresos'), citas = n('inp-citas');
+  const horasOfertadas = n('inp-horas-ofertadas');
+  const horasContrato  = n('inp-horas-contrato');
+
+  if (!ingresos && !citas)   { toast('Introduce al menos ingresos y citas'); return; }
+  if (!horasOfertadas)       { toast('Introduce las horas ofertadas en agenda'); return; }
+
+  const reg = {
+    mes, anio, fisio,
+    mes_num: MESES.indexOf(mes) + 1,
+    ingresos, citas,
+    horas_ofertadas: horasOfertadas,
+    horas_contrato:  horasContrato,
+    horas_semana:    n('inp-horas-semana'),
+    semanas:         parseFloat(s('inp-semanas')),
+    coste_lab:       n('inp-coste'),
+    ci_alq:          n('inp-ci-alquiler'),
+    ci_mat:          n('inp-ci-material'),
+    ci_otros:        n('inp-ci-otros')
+  };
+
+  // Si ya existe el registro para ese mes/año/fisio, añadimos el id para hacer upsert
+  const existing = datos.find(d => d.mes === mes && d.anio === anio && d.fisio === fisio);
+  if (existing) reg.id = existing.id;
+
+  g('btn-guardar').disabled = true;
+  setSyncStatus('syncing', 'Guardando...');
+  try {
+    await dbUpsert(reg);
+    await cargarDatos();
+    const m = g('msg-ok'); m.style.display = 'inline';
+    setTimeout(() => m.style.display = 'none', 3500);
+  } catch(e) {
+    setSyncStatus('error', 'Error al guardar');
+    toast('Error al guardar. ¿Está creada la tabla en Supabase?', 5000);
+  }
+  g('btn-guardar').disabled = false;
+}
+
+function limpiarForm() {
+  ['inp-ingresos','inp-citas','inp-horas-semana','inp-horas-contrato','inp-horas-ofertadas',
+   'inp-coste','inp-ci-alquiler','inp-ci-material','inp-ci-otros'].forEach(id => g(id).value = '');
+  g('hint-contrato').textContent = '';
+}
+
+async function eliminar(id) {
+  if (!confirm('¿Eliminar este registro?')) return;
+  setSyncStatus('syncing', 'Eliminando...');
+  try {
+    await dbDelete(id);
+    await cargarDatos();
+    toast('Registro eliminado');
+  } catch(e) {
+    setSyncStatus('error', 'Error al eliminar');
+    toast('Error al eliminar el registro.', 3000);
+  }
+}
+
+function renderTabla() {
+  const el = g('tabla-registros');
+  if (!datos.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div>Aún no hay registros.</div>'; return; }
+  el.innerHTML = `<table><thead><tr>
+    <th>Período</th><th>Fisioterapeuta</th><th>Ingresos</th><th>Citas</th>
+    <th>H. ofertadas</th><th>H. contrato</th><th>Ticket medio</th><th>% Ocup.</th><th>Rentabilidad</th><th></th>
+  </tr></thead>
+  <tbody>${datos.map(r => {
+    const m = calcMetrics(r, getPeriodo(r.mes, r.anio));
+    return `<tr>
+      <td style="font-family:'DM Mono',monospace;font-size:12px">${r.mes} ${r.anio}</td>
+      <td><strong>${r.fisio}</strong></td>
+      <td>${r.ingresos.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})} €</td>
+      <td>${r.citas}</td>
+      <td>${r.horas_ofertadas}h</td>
+      <td style="color:var(--text3)">${r.horas_contrato||'—'}h</td>
+      <td>${m.ticketMedio.toFixed(2)} €</td>
+      <td>${m.pctOcup.toFixed(1)}%</td>
+      <td>${rentBadge(m.rentPct)} ${m.rentPct.toFixed(1)}%</td>
+      <td><button class="btn sm danger" onclick="eliminar(${r.id})">Eliminar</button></td>
+    </tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+function calcularResumen() {
+  const mes = s('res-mes'), anio = s('res-anio');
+  const pd = getPeriodo(mes, anio);
+  const el = g('resumen-contenido');
+  if (!pd.length) { el.innerHTML = '<div class="card"><div class="empty"><div class="empty-icon">🔍</div>No hay datos para ese período.</div></div>'; return; }
+  el.innerHTML = pd.map(r => {
+    const m = calcMetrics(r, pd);
+    const col = COLORS[FISIOS.indexOf(r.fisio)] || COLORS[0];
+    return `<div class="fisio-result">
+      <div class="fisio-result-header">
+        <div class="fisio-result-name" style="color:${col}">${r.fisio}</div>
+        <span style="font-size:12px;color:var(--text3);font-family:'DM Mono',monospace">${mes} ${anio}</span>
+      </div>
+      <div class="fisio-result-body">
+        <div class="metrics-grid" style="margin-bottom:16px">
+          <div class="metric"><div class="metric-label">Ingresos</div><div class="metric-value">${r.ingresos.toLocaleString('es-ES',{maximumFractionDigits:0})} €</div></div>
+          <div class="metric"><div class="metric-label">Citas atendidas</div><div class="metric-value">${r.citas}</div></div>
+          <div class="metric"><div class="metric-label">H. ofertadas agenda</div><div class="metric-value">${r.horas_ofertadas}h</div><div class="metric-sub">de Clinni / TIMP</div></div>
+          <div class="metric"><div class="metric-label">Ticket medio</div><div class="metric-value">${m.ticketMedio.toFixed(2)} €</div></div>
+        </div>
+        <div class="alert warn" style="font-size:12px;padding:8px 12px">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="flex-shrink:0;margin-top:1px"><circle cx="8" cy="8" r="6"/><path d="M8 7v4M8 5.5v.5"/></svg>
+          % Ocupación sobre horas ofertadas · Coste directo sobre ${r.horas_contrato||r.horas_ofertadas}h de contrato
+        </div>
+        <hr class="divider">
+        <div class="metrics-grid" style="margin-bottom:16px">
+          <div class="metric"><div class="metric-label">% Ocupación</div><div class="metric-value">${m.pctOcup.toFixed(1)}%</div><div class="metric-sub">citas ÷ h. ofertadas</div></div>
+          <div class="metric"><div class="metric-label">Coste directo/hora</div><div class="metric-value">${m.costeDirHora.toFixed(2)} €</div><div class="metric-sub">nómina+SS ÷ h. contrato</div></div>
+          <div class="metric"><div class="metric-label">Coste indirecto/hora</div><div class="metric-value">${m.costeIndHora.toFixed(2)} €</div><div class="metric-sub">proporcional h. ofertadas</div></div>
+          <div class="metric"><div class="metric-label">Coste total/hora</div><div class="metric-value">${m.costeTotalHora.toFixed(2)} €</div></div>
+        </div>
+        <hr class="divider">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;max-width:560px">
+          <div class="metric"><div class="metric-label">Ingreso/hora ofertada</div><div class="metric-value">${m.ingHora.toFixed(2)} €</div></div>
+          <div class="metric ${m.benefHora>=0?'accent':'warn'}"><div class="metric-label">Beneficio por hora</div><div class="metric-value">${m.benefHora>=0?'+':''}${m.benefHora.toFixed(2)} €</div></div>
+          <div class="metric ${m.rentPct>=40?'accent':m.rentPct>=20?'':'warn'}"><div class="metric-label">% Rentabilidad</div><div class="metric-value">${m.rentPct.toFixed(1)}%</div><div class="metric-sub">${rentBadge(m.rentPct)}</div></div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderDashboard() {
+  g('fisio-tabs-dash').innerHTML = FISIOS.map(f =>
+    `<button class="fisio-tab ${f===selFisio?'active':''}" onclick="selectFisio('${f}')">${f}</button>`
+  ).join('');
+  renderDashCharts();
+}
+
+function selectFisio(f) {
+  selFisio = f;
+  document.querySelectorAll('.fisio-tab').forEach(b => b.classList.toggle('active', b.textContent === f));
+  renderDashCharts();
+}
+
+function getSeries(fisio) {
+  return datos.filter(d => d.fisio === fisio)
+    .sort((a, b) => a.anio !== b.anio ? (a.anio > b.anio ? 1 : -1) : a.mes_num - b.mes_num)
+    .map(r => ({ label: `${r.mes.substring(0,3)} ${String(r.anio).substring(2)}`, r, m: calcMetrics(r, getPeriodo(r.mes, r.anio)) }));
+}
+
+function mkChart(id, type, labels, datasets, extra = {}) {
+  if (charts[id]) charts[id].destroy();
+  const ctx = g(id); if (!ctx) return;
+  charts[id] = new Chart(ctx, { type, data: { labels, datasets }, options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { autoSkip: false, maxRotation: 45, font: { size: 11 } }, grid: { display: false } },
+      y: { ticks: { font: { size: 11 } }, grid: { color: 'rgba(128,128,128,0.08)' }, ...(extra.yTicks||{}) },
+      ...(extra.scales||{})
+    }
+  }});
+}
+
+function renderDashCharts() {
+  const series = getSeries(selFisio);
+  const empty = g('dash-empty'), chartsEl = g('dash-charts');
+  if (!series.length) { empty.style.display = 'block'; chartsEl.style.display = 'none'; return; }
+  empty.style.display = 'none'; chartsEl.style.display = 'block';
+  const lbl = series.map(s => s.label);
+  const ci = FISIOS.indexOf(selFisio);
+  const col = COLORS[ci]||COLORS[0], fade = FADES[ci]||FADES[0];
+  const last = series[series.length-1];
+  g('dash-metrics').innerHTML = [
+    { lbl:'Último ingreso', val:`${last.r.ingresos.toLocaleString('es-ES',{maximumFractionDigits:0})} €` },
+    { lbl:'Ticket medio',   val:`${last.m.ticketMedio.toFixed(2)} €` },
+    { lbl:'Beneficio/hora', val:`${last.m.benefHora>=0?'+':''}${last.m.benefHora.toFixed(2)} €`, cls: last.m.benefHora>=0?'accent':'warn' },
+    { lbl:'Rentabilidad',   val:`${last.m.rentPct.toFixed(1)}%`, cls: last.m.rentPct>=40?'accent':last.m.rentPct>=20?'':'warn' },
+  ].map(m => `<div class="metric ${m.cls||''}"><div class="metric-label">${m.lbl}</div><div class="metric-value">${m.val}</div><div class="metric-sub">${last.label}</div></div>`).join('');
+  mkChart('ch-ingresos','bar',lbl,[{data:series.map(s=>+s.r.ingresos.toFixed(2)),backgroundColor:col,borderRadius:4}]);
+  mkChart('ch-citas','bar',lbl,[{data:series.map(s=>s.r.citas),backgroundColor:col,borderRadius:4}]);
+  mkChart('ch-ticket','line',lbl,[{data:series.map(s=>+s.m.ticketMedio.toFixed(2)),borderColor:col,backgroundColor:fade,tension:0.35,fill:true,pointRadius:4,pointBackgroundColor:col}]);
+  mkChart('ch-ocup','line',lbl,[{data:series.map(s=>+s.m.pctOcup.toFixed(1)),borderColor:col,backgroundColor:fade,tension:0.35,fill:true,pointRadius:4,pointBackgroundColor:col}],{scales:{y:{max:100,ticks:{callback:v=>v+'%'}}}});
+  mkChart('ch-coste-h','line',lbl,[{data:series.map(s=>+s.m.costeTotalHora.toFixed(2)),borderColor:'#b94040',backgroundColor:'#b9404022',tension:0.35,fill:true,pointRadius:4,pointBackgroundColor:'#b94040'}]);
+  const bData = series.map(s => +s.m.benefHora.toFixed(2));
+  mkChart('ch-benef','bar',lbl,[{data:bData,backgroundColor:bData.map(v=>v>=0?col:'#b94040'),borderRadius:4}]);
+  mkChart('ch-rent','line',lbl,[{data:series.map(s=>+s.m.rentPct.toFixed(1)),borderColor:col,backgroundColor:fade,tension:0.35,fill:true,pointRadius:4,pointBackgroundColor:col}],{scales:{y:{ticks:{callback:v=>v+'%'}}}});
+}
+
+function calcularComparativa() {
+  const mes = s('cmp-mes'), anio = s('cmp-anio');
+  const pd = getPeriodo(mes, anio);
+  const el = g('comparativa-contenido');
+  if (!pd.length) { el.innerHTML = '<div class="card"><div class="empty"><div class="empty-icon">🔍</div>No hay datos para ese período.</div></div>'; return; }
+  const rows = pd.map(r => ({ r, m: calcMetrics(r, pd) }));
+  const labels = rows.map(x => x.r.fisio);
+  const cols = COLORS.slice(0, rows.length);
+  el.innerHTML = `<div class="card mb16"><div class="card-title">Comparativa — ${mes} ${anio}</div><div class="table-wrap"><table>
+    <thead><tr><th>Fisioterapeuta</th><th>Ingresos</th><th>Citas</th><th>H. ofertadas</th><th>H. contrato</th><th>Ticket medio</th><th>% Ocup.</th><th>Coste/hora</th><th>Beneficio/hora</th><th>Rentabilidad</th></tr></thead>
+    <tbody>${rows.map((x,i) => `<tr>
+      <td><strong style="color:${cols[i]||cols[0]}">${x.r.fisio}</strong></td>
+      <td>${x.r.ingresos.toLocaleString('es-ES',{maximumFractionDigits:0})} €</td>
+      <td>${x.r.citas}</td><td>${x.r.horas_ofertadas}h</td>
+      <td style="color:var(--text3)">${x.r.horas_contrato||'—'}h</td>
+      <td>${x.m.ticketMedio.toFixed(2)} €</td><td>${x.m.pctOcup.toFixed(1)}%</td>
+      <td>${x.m.costeTotalHora.toFixed(2)} €</td>
+      <td style="color:${x.m.benefHora>=0?'var(--accent)':'var(--red)'};font-weight:500">${x.m.benefHora>=0?'+':''}${x.m.benefHora.toFixed(2)} €</td>
+      <td>${rentBadge(x.m.rentPct)} ${x.m.rentPct.toFixed(1)}%</td>
+    </tr>`).join('')}</tbody>
+  </table></div></div>
+  <div class="grid2">
+    <div class="card"><div class="card-title">Ingresos por fisioterapeuta</div><div class="chart-wrap" style="height:200px"><canvas id="cmp-ingresos"></canvas></div></div>
+    <div class="card"><div class="card-title">% Rentabilidad por fisioterapeuta</div><div class="chart-wrap" style="height:200px"><canvas id="cmp-rent"></canvas></div></div>
+  </div>`;
+  setTimeout(() => {
+    if (charts['cmp-ingresos']) charts['cmp-ingresos'].destroy();
+    if (charts['cmp-rent']) charts['cmp-rent'].destroy();
+    charts['cmp-ingresos'] = new Chart(g('cmp-ingresos'),{type:'bar',data:{labels,datasets:[{data:rows.map(x=>+x.r.ingresos.toFixed(0)),backgroundColor:cols,borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'rgba(128,128,128,0.08)'}}}}});
+    charts['cmp-rent'] = new Chart(g('cmp-rent'),{type:'bar',data:{labels,datasets:[{data:rows.map(x=>+x.m.rentPct.toFixed(1)),backgroundColor:cols,borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{ticks:{callback:v=>v+'%'},grid:{color:'rgba(128,128,128,0.08)'}}}}});
+  }, 50);
+}
+
+cargarDatos();
+</script>
+</body>
+</html>
